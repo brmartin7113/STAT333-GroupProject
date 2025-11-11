@@ -3,3 +3,10 @@ title: "EDA"
 output: html_document
 ---
 
+```{r}
+library(tidyverse)
+```
+
+```{r}
+Judge <- read_csv("Data/judge_batting_2024.csv")
+```
