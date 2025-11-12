@@ -10,3 +10,10 @@ library(tidyverse)
 ```{r}
 Judge <- read_csv("Data/judge_batting_2024.csv")
 ```
+
+```{r}
+#Re-orders the data into time increasing instead of time decreasing
+Judge1 <- Judge %>%
+  group_by(game_date, inning, pitch_number) %>%
+  arrange(desc(game_date), .by_group = TRUE)
+```
