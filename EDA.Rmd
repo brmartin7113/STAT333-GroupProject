@@ -15,5 +15,19 @@ Judge <- read_csv("Data/judge_batting_2024.csv")
 #Re-orders the data into time increasing instead of time decreasing
 Judge1 <- Judge %>%
   group_by(game_date, inning, pitch_number) %>%
-  arrange(desc(game_date), .by_group = TRUE)
+  arrange(desc(game_date), .by_group = TRUE) %>%
+  ungroup()
+```
+
+```{r}
+
+
+Judge1 %>%
+  group_by(game_date) %>%
+  summarise(pitches = n())
+
+Judge1 %>%
+  group_by(game_date) %>%
+  filter(description == "ball") %>%
+  summarise(balls = n())
 ```
