@@ -20,14 +20,33 @@ Judge1 <- Judge %>%
 ```
 
 ```{r}
-
-
-Judge1 %>%
+temp <- Judge1 %>%
   group_by(game_date) %>%
   summarise(pitches = n())
 
-Judge1 %>%
+temp
+
+temp2 <- Judge1 %>%
   group_by(game_date) %>%
   filter(description == "ball") %>%
   summarise(balls = n())
+
+temp2
 ```
+
+The dimensions for the different stats are different.
+
+```{r warning=FALSE}
+#If we are missing exactly one date value, then we only want the first term where the date values between the two data-sets are not equal to 0.
+which(temp$game_date-temp2$game_date != 0)[1]
+
+temp$game_date[142]
+
+temp2$game_date[142]
+
+Judge1 %>%
+  filter(game_date=="2024-09-12")
+```
+
+On the September 12th game, Aaron Judge managed to get 1-4 (successful hits-appearances) with no balls called within 5 pitches.
+
