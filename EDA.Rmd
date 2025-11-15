@@ -50,3 +50,59 @@ Judge1 %>%
 
 On the September 12th game, Aaron Judge managed to get 1-4 (successful hits-appearances) with no balls called within 5 pitches.
 
+Problem: Using conventional dplyr functions are creating holes in the mutated data that makes collating each new column impossible
+
+Solution: Make my own function that does not create holes in the mutated data such that collating each new column is possible
+
+Function Input: Some event (balls, strikes, hit-fail, hit-success)
+
+Function Output: The updated data frame with the added column
+
+```{r}
+#The function
+BBJudgeColAdder <- function(input = ""){
+  #Local variables containing info that we will use within the function
+  Dates <- unique(Judge1$game_date)
+  rows <- length(Dates)
+  
+  #Generate a 0-vector with every game_dates values
+  tempDF <- matrix(
+    0,
+    nrow=rows, ncol=1,
+    dimnames=list(
+      unique(Judge1$game_date),
+      "temp"
+    )
+  )
+  #Game dates are numerical instead of the usual Date style
+  
+  #Generate the original mutated function. This is needed for the next step
+  tempIns <- Judge1 %>%
+    group_by(game_date) %>%
+    filter(description == input) %>%
+    summarise("temp" = n()) %>%
+    mutate(game_date = as.numeric(game_date))
+  #Subject to change as we will be making our own events column to generalize the process
+  
+  #We merge the tempIns with the tempDF based on matching game dates. This ensures that 0's are included
+  tempDF[paste(tempIns$game_date),] <- tempIns$temp
+  dimnames(tempDF) <- list(
+    Dates,
+    "temp")
+  
+  #We merge the tempDF values into the global data frame
+  temp <- temp %>%
+    mutate(`input` = tempDF[,"temp"]) %>%
+    rename_with(~ paste0(input), starts_with("nonexistent"), .cols=`input`)
+  return(temp)
+}
+```
+
+Testing the function
+
+```{r}
+temp <- BBJudgeColAdder(input = "ball")
+```
+
+
+
