@@ -104,5 +104,22 @@ Testing the function
 temp <- BBJudgeColAdder(input = "ball")
 ```
 
+The function works. Now we can begin the true data cleaning process.
+
+Considering that we have a method to add columns into the big data-set. We should rebuild the data to allow the function to work with some minimal tweaks. This would involve collating both the description and events variables into definitive columns for each game day the batter has. 
+
+```{r}
+columns <- unique(Judge1$description)
+columns
+
+Judge2 <- Judge1 %>%
+  group_by(game_date) %>%
+  summarise(pitch = n())
+
+for(i in 1:length(columns)){
+  print(columns[i])
+  Judge2 <- BBJudgeColAdder(columns[i])
+}
+```
 
 
