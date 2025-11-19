@@ -147,7 +147,7 @@ $$
 
 ```{r}
 
-GeneralPois <- glmer(`good hits` ~ offset(log(pitches))+`hits last week`, family=poisson, data=Judge3)
+GeneralPois <- glmer(`good hits` ~ offset(log(pitches))+`hits` + (1+week|player), family=poisson, data=Judge3)
 ```
 
 
