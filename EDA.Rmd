@@ -5,10 +5,13 @@ output: html_document
 
 ```{r}
 library(tidyverse)
+library(lme4)
 ```
 
 ```{r}
-Judge <- read_csv("Data/judge_batting_2024.csv")
+Judge  <- read_csv("Data/judge_batting_2024.csv")
+Ohtani <- read_csv("Data/ohtani_batting_2024.csv")
+Betts  <- read_csv("Data/betts_batting_2024.csv")
 ```
 
 ```{r}
@@ -16,180 +19,135 @@ Judge <- read_csv("Data/judge_batting_2024.csv")
 Judge1 <- Judge %>%
   group_by(game_date, inning, pitch_number) %>%
   arrange(desc(game_date), .by_group = TRUE) %>%
-  ungroup()
+  ungroup() %>%
+  mutate(week = as.numeric(strftime(game_date, format = "%V")),
+         week = week-min(week)+1)
+Ohtani1 <- Ohtani %>%
+  group_by(game_date, inning, pitch_number) %>%
+  arrange(desc(game_date), .by_group = TRUE) %>%
+  ungroup() %>%
+  mutate(week = as.numeric(strftime(game_date, format = "%V")),
+         week = week-min(week)+1)
+Betts1 <- Betts %>%
+  group_by(game_date, inning, pitch_number) %>%
+  arrange(desc(game_date), .by_group = TRUE) %>%
+  ungroup() %>%
+  mutate(week = as.numeric(strftime(game_date, format = "%V")),
+         week = week-min(week)+1)
 ```
 
-```{r}
-temp <- Judge1 %>%
-  group_by(game_date) %>%
-  summarise(pitches = n())
-
-temp
-
-temp2 <- Judge1 %>%
-  group_by(game_date) %>%
-  filter(description == "ball") %>%
-  summarise(balls = n())
-
-temp2
-```
-
-The dimensions for the different stats are different.
 
 ```{r warning=FALSE}
-#If we are missing exactly one date value, then we only want the first term where the date values between the two data-sets are not equal to 0.
-which(temp$game_date-temp2$game_date != 0)[1]
-
-temp$game_date[142]
-
-temp2$game_date[142]
-
-Judge1 %>%
-  filter(game_date=="2024-09-12")
-```
-
-On the September 12th game, Aaron Judge managed to get 1-4 (successful hits-appearances) with no balls called within 5 pitches.
-
-Problem: Using conventional dplyr functions are creating holes in the mutated data that makes collating each new column impossible
-
-Solution: Make my own function that does not create holes in the mutated data such that collating each new column is possible
-
-Function Input: Some event (balls, strikes, hit-fail, hit-success)
-
-Function Output: The updated data frame with the added column
-
-```{r}
-#The function
-BBJudgeColAdder <- function(input = ""){
-  #Local variables containing info that we will use within the function
-  Dates <- unique(Judge1$game_date)
-  rows <- length(Dates)
-  
-  #Generate a 0-vector with every game_dates values
-  tempDF <- matrix(
-    0,
-    nrow=rows, ncol=1,
-    dimnames=list(
-      unique(Judge1$game_date),
-      "temp"
-    )
-  )
-  #Game dates are numerical instead of the usual Date style
-  
-  #Generate the original mutated function. This is needed for the next step
-  tempIns <- Judge1 %>%
-    group_by(game_date) %>%
-    filter(description == input) %>%
-    summarise("temp" = n()) %>%
-    mutate(game_date = as.numeric(game_date))
-  #Subject to change as we will be making our own events column to generalize the process
-  
-  #We merge the tempIns with the tempDF based on matching game dates. This ensures that 0's are included
-  tempDF[paste(tempIns$game_date),] <- tempIns$temp
-  dimnames(tempDF) <- list(
-    Dates,
-    "temp")
-  
-  #We merge the tempDF values into the global data frame
-  temp <- temp %>%
-    mutate(`input` = tempDF[,"temp"]) %>%
-    rename_with(~ paste0(input), starts_with("nonexistent"), .cols=`input`)
-  return(temp)
-}
-```
-
-Testing the function
-
-```{r}
-temp <- BBJudgeColAdder(input = "ball")
-```
-
-The function works. Now we can begin the true data cleaning process.
-
-Considering that we have a method to add columns into the big data-set. We should rebuild the data to allow the function to work with some minimal tweaks. This would involve collating both the description and events variables into definitive columns for each game day the batter has. 
-
-```{r}
-columns <- unique(Judge1$description)
-columns
-
-Judge2 <- Judge1 %>%
-  group_by(game_date) %>%
-  summarise(pitch = n())
-
-for(i in 1:length(columns)){
-  print(columns[i])
-  Judge2 <- BBJudgeColAdder(columns[i])
-}
-```
-
-```{r}
 Judge2 <- Judge1 %>%
   filter(description == "hit_into_play") %>%
   mutate(outcome = case_when(
     events == c("single", "double", "triple", "home_run", "sac_fly") ~ "HitGood",
     events != c("single", "double", "triple", "home_run", "sac_fly") ~ "HitBad"
     )
-  ) %>%
-  mutate(week = as.numeric(strftime(game_date, format = "%V"))) %>%
-  mutate(week = week-min(week)+1)
-```
-
-```{r}
-BBJudgeColAdder <- function(input = ""){
-  #Local variables containing info that we will use within the function
-  Dates <- unique(Judge2$game_week)
-  rows <- length(Dates)
-  
-  #Generate a 0-vector with every game_dates values
-  tempDF <- matrix(
-    0,
-    nrow=rows, ncol=1,
-    dimnames=list(
-      Dates,
-      "temp"
+  )
+Ohtani2 <- Ohtani1 %>%
+  filter(description == "hit_into_play") %>%
+  mutate(outcome = case_when(
+    events == c("single", "double", "triple", "home_run", "sac_fly") ~ "HitGood",
+    events != c("single", "double", "triple", "home_run", "sac_fly") ~ "HitBad"
     )
   )
-  #Game dates are numerical instead of the usual Date style
-  
-  #Generate the original mutated function. This is needed for the next step
-  tempIns <- Judge2 %>%
-    group_by(week) %>%
-    filter(outcome == input) %>%
-    summarise("temp" = n())
-  #Subject to change as we will be making our own events column to generalize the process
-  
-  #We merge the tempIns with the tempDF based on matching game dates. This ensures that 0's are included
-  tempDF[paste(tempIns$week),] <- tempIns$temp
-  dimnames(tempDF) <- list(
-    Dates,
-    "temp")
-  
-  #We merge the tempDF values into the global data frame
-  temp <- temp %>%
-    mutate(`input` = tempDF[,"temp"]) %>%
-    rename_with(~ paste0(input), starts_with("nonexistent"), .cols=`input`)
-  return(temp)
-}
+Betts2 <- Betts1 %>%
+  filter(description == "hit_into_play") %>%
+  mutate(outcome = case_when(
+    events == c("single", "double", "triple", "home_run", "sac_fly") ~ "HitGood",
+    events != c("single", "double", "triple", "home_run", "sac_fly") ~ "HitBad"
+    )
+  )
 ```
 
 ```{r}
 Judge3 <- cbind(
+  Judge1 %>%
+    group_by(week)%>%
+    summarise(pitches = n()) %>%
+    select(week, pitches),
   Judge2 %>%
     group_by(week) %>%
-    summarise(hits = n()),
+    summarise(hits = n()) %>%
+    select(hits),
   Judge2 %>%
     group_by(week) %>%
     filter(outcome=="HitBad")%>%
     summarise(`bad hits` = n()) %>%
-    select(`bad hits`),
-  Judge1 %>%
-    mutate(week = as.numeric(strftime(game_date, format = "%V")), 
-           week = week-min(week)+1)%>%
+    select(`bad hits`)
+  )%>%
+  mutate(`good hits` = `hits` - `bad hits`,
+         player = "Judge")
+Ohtani3 <- cbind(
+  Ohtani1 %>%
     group_by(week)%>%
     summarise(pitches = n()) %>%
-    select(pitches)
+    select(week, pitches),
+  Ohtani2 %>%
+    group_by(week) %>%
+    summarise(hits = n()) %>%
+    select(hits),
+  Ohtani2 %>%
+    group_by(week) %>%
+    filter(outcome=="HitBad")%>%
+    summarise(`bad hits` = n()) %>%
+    select(`bad hits`)
   )%>%
-  mutate(`good hits` = `hits` - `bad hits`)
+  mutate(`good hits` = `hits` - `bad hits`,
+         player = "Ohtani")
+Betts3 <- cbind(
+  Betts1 %>%
+    group_by(week)%>%
+    summarise(pitches = n()) %>%
+    select(week, pitches),
+  Betts2 %>%
+    group_by(week) %>%
+    summarise(hits = n()) %>%
+    select(hits),
+  Betts2 %>%
+    group_by(week) %>%
+    filter(outcome=="HitBad")%>%
+    summarise(`bad hits` = n()) %>%
+    select(`bad hits`)
+  )%>%
+  mutate(`good hits` = `hits` - `bad hits`,
+         player = "Betts")
+
+Dataset <- rbind(
+  Judge3,
+  Ohtani3,
+  Betts3
+)
+```
+
+```{r}
+Judge3 <- Judge3 %>%
+  mutate(`hits last week` = 0)
+
+temp <- numeric(length(Judge3$week)+1)
+temp[1:length(Judge3$week)+1] <- Judge3$hits
+temp <- temp[-length(temp)]
+temp
+
+Judge3 <- Judge3 %>%
+  mutate(`hits last week` = temp)
+
+Pois1 <- glm(`good hits` ~ offset(log(pitches)) + `hits last week`, family = poisson, data=Judge3)
+summary(Pois1)
+```
+
+$$
+\hat{y}_t \sim Poisson(\hat{\lambda}_t)
+$$
+
+$$
+log(\hat{\lambda}_t)=
+$$
+
+```{r}
+
+GeneralPois <- glmer(`good hits` ~ offset(log(pitches))+`hits last week`, family=poisson, data=Judge3)
 ```
 
 
