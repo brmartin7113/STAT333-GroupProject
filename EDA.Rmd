@@ -123,28 +123,75 @@ for(i in 1:length(columns)){
 ```
 
 ```{r}
-Judge1 <- Judge1 %>%
-  mutate(
-    outcome = case_when(
-      description == "ball" ~ "ball",
-      description != c("ball", "hit_into_play", "hit_by_pitch") ~ "strike",
-      description == "hit_into_play" & events == c("") ~ "HitBad"
+Judge2 <- Judge1 %>%
+  filter(description == "hit_into_play") %>%
+  mutate(outcome = case_when(
+    events == c("single", "double", "triple", "home_run", "sac_fly") ~ "HitGood",
+    events != c("single", "double", "triple", "home_run", "sac_fly") ~ "HitBad"
     )
   ) %>%
-  mutate(
-    outcome = case_when(
-      
+  mutate(week = as.numeric(strftime(game_date, format = "%V"))) %>%
+  mutate(week = week-min(week)+1)
+```
+
+```{r}
+BBJudgeColAdder <- function(input = ""){
+  #Local variables containing info that we will use within the function
+  Dates <- unique(Judge2$game_week)
+  rows <- length(Dates)
+  
+  #Generate a 0-vector with every game_dates values
+  tempDF <- matrix(
+    0,
+    nrow=rows, ncol=1,
+    dimnames=list(
+      Dates,
+      "temp"
     )
   )
-    #outcome = case_when(
-      #description == "ball" & events == "walk" ~ "walk"),
-      #description != c("ball", "hit_into_play", "hit_by_pitch") & events == "srtikeout" ~ "StrikeOut"
-    #),
-    #outcome = case_when(
-      #,
-      #description == "hit_into_play" & events != c("") ~ "HitGood",
-    #)
-  )
+  #Game dates are numerical instead of the usual Date style
+  
+  #Generate the original mutated function. This is needed for the next step
+  tempIns <- Judge2 %>%
+    group_by(week) %>%
+    filter(outcome == input) %>%
+    summarise("temp" = n())
+  #Subject to change as we will be making our own events column to generalize the process
+  
+  #We merge the tempIns with the tempDF based on matching game dates. This ensures that 0's are included
+  tempDF[paste(tempIns$week),] <- tempIns$temp
+  dimnames(tempDF) <- list(
+    Dates,
+    "temp")
+  
+  #We merge the tempDF values into the global data frame
+  temp <- temp %>%
+    mutate(`input` = tempDF[,"temp"]) %>%
+    rename_with(~ paste0(input), starts_with("nonexistent"), .cols=`input`)
+  return(temp)
+}
 ```
+
+```{r}
+Judge3 <- cbind(
+  Judge2 %>%
+    group_by(week) %>%
+    summarise(hits = n()),
+  Judge2 %>%
+    group_by(week) %>%
+    filter(outcome=="HitBad")%>%
+    summarise(`bad hits` = n()) %>%
+    select(`bad hits`),
+  Judge1 %>%
+    mutate(week = as.numeric(strftime(game_date, format = "%V")), 
+           week = week-min(week)+1)%>%
+    group_by(week)%>%
+    summarise(pitches = n()) %>%
+    select(pitches)
+  )%>%
+  mutate(`good hits` = `hits` - `bad hits`)
+```
+
+
 
 
