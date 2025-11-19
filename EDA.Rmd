@@ -122,4 +122,29 @@ for(i in 1:length(columns)){
 }
 ```
 
+```{r}
+Judge1 <- Judge1 %>%
+  mutate(
+    outcome = case_when(
+      description == "ball" ~ "ball",
+      description != c("ball", "hit_into_play", "hit_by_pitch") ~ "strike",
+      description == "hit_into_play" & events == c("") ~ "HitBad"
+    )
+  ) %>%
+  mutate(
+    outcome = case_when(
+      
+    )
+  )
+    #outcome = case_when(
+      #description == "ball" & events == "walk" ~ "walk"),
+      #description != c("ball", "hit_into_play", "hit_by_pitch") & events == "srtikeout" ~ "StrikeOut"
+    #),
+    #outcome = case_when(
+      #,
+      #description == "hit_into_play" & events != c("") ~ "HitGood",
+    #)
+  )
+```
+
 
