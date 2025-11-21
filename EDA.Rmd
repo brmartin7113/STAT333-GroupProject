@@ -178,10 +178,20 @@ AIC(GeneralPois2)
 ```{r}
 Dataset %>%
   ggplot(aes(x=week, color=player))+
-  geom_point(aes(y=`good hits`))+
-  geom_line(aes(y=`fittedP1`), linetype=1, linewidth=0.5)+
-  geom_line(aes(y=`fittedP2`), linetype=2, linewidth=0.75)+
-  geom_line(aes(y=`fittedP3`), linetype=3, linewidth=1)+
+  geom_line(aes(y=`good hits`), size=0.5)+
+  geom_point(aes(y=`fittedP1`), shape=15, size=1)+
+  geom_point(aes(y=`fittedP2`), shape=17, size=1)+
+  geom_point(aes(y=`fittedP3`), shape=18, size=1)+
   theme_minimal()
 ```
 
+```{r}
+Dataset %>%
+  group_by(player) %>%
+  summarise(
+    `weeks played` = n(),
+    `tot. good hits` = sum(`good hits`),
+    `avg. good hits per week` = mean(`good hits`),
+    `sd. good hits per week` = var(`good hits`)
+  )
+```
