@@ -114,6 +114,15 @@ Betts3 <- cbind(
   mutate(`good hits` = `hits` - `bad hits`,
          player = "Betts")
 
+Judge3 <- Judge3 %>%
+  mutate(`hits last week` = append(Judge3$hits[1:26], 0, 0))
+Ohtani3 <- Ohtani3 %>%
+  mutate(`hits last week` = append(Ohtani3$hits[1:26], 0, 0))
+Betts3 <- Betts3 %>%
+  mutate(`hits last week` = append(Betts3$hits[1:18], 0, 0),
+         `hits last week`) %>%
+  mutate(`hits last week` = ifelse(week == 21, 0, `hits last week`))
+
 Dataset <- rbind(
   Judge3,
   Ohtani3,
@@ -122,19 +131,12 @@ Dataset <- rbind(
 ```
 
 ```{r}
-Judge3 <- Judge3 %>%
-  mutate(`hits last week` = 0)
-
-temp <- numeric(length(Judge3$week)+1)
-temp[1:length(Judge3$week)+1] <- Judge3$hits
-temp <- temp[-length(temp)]
-temp
-
-Judge3 <- Judge3 %>%
-  mutate(`hits last week` = temp)
-
-Pois1 <- glm(`good hits` ~ offset(log(pitches)) + `hits last week`, family = poisson, data=Judge3)
+#Model 1
+Pois1 <- glm(`good hits` ~ as.factor(week)+offset(log(pitches)) + `hits last week`, family = poisson, data=Dataset)
 summary(Pois1)
+
+Dataset <- Dataset %>%
+  mutate(fittedP1 = fitted(Pois1))
 ```
 
 $$
@@ -146,10 +148,30 @@ log(\hat{\lambda}_t)=
 $$
 
 ```{r}
+GeneralPois1 <- glmer(
+  `good hits` ~ as.factor(week)+offset(log(pitches))+`hits last week` + (1|week), family="poisson", data=Dataset
+)
+summary(GeneralPois1)
+Dataset <- Dataset %>%
+  mutate(fittedP2 = fitted(GeneralPois1))
+```
 
-GeneralPois <- glmer(`good hits` ~ offset(log(pitches))+`hits` + (1+week|player), family=poisson, data=Judge3)
+```{r}
+#Model 3
+GeneralPois2 <- glmer(
+  `good hits` ~ as.factor(week)+offset(log(pitches))+`hits last week` + (1+week|player) + (1|week), family="poisson", data=Dataset)
+summary(GeneralPois2)
+Dataset <- Dataset %>%
+  mutate(fittedP3 = fitted(GeneralPois2))
 ```
 
 
-
+```{r}
+Dataset %>%
+  ggplot(aes(x=week, color=player))+
+  geom_point(aes(y=`good hits`))+
+  #geom_line(aes(y=`fittedP1`), linetype=1)+
+  #geom_line(aes(y=`fittedP2`), linetype=2)+
+  geom_line(aes(y=`fittedP3`), linetype=3)
+```
 
