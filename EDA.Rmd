@@ -1,20 +1,21 @@
 ---
 title: "EDA"
-output: html_document
+output: pdf_document
 ---
 
-```{r}
+```{r include=FALSE}
 library(tidyverse)
+library(tinytex)
 library(lme4)
 ```
 
-```{r}
+```{r include=FALSE}
 Judge  <- read_csv("Data/judge_batting_2024.csv")
 Ohtani <- read_csv("Data/ohtani_batting_2024.csv")
 Betts  <- read_csv("Data/betts_batting_2024.csv")
 ```
 
-```{r}
+```{r include=FALSE}
 #Re-orders the data into time increasing instead of time decreasing
 Judge1 <- Judge %>%
   group_by(game_date, inning, pitch_number) %>%
@@ -37,7 +38,7 @@ Betts1 <- Betts %>%
 ```
 
 
-```{r warning=FALSE}
+```{r warning=FALSE, include=FALSE}
 Judge2 <- Judge1 %>%
   filter(description == "hit_into_play") %>%
   mutate(outcome = case_when(
@@ -61,7 +62,7 @@ Betts2 <- Betts1 %>%
   )
 ```
 
-```{r}
+```{r include=FALSE}
 Judge3 <- cbind(
   Judge1 %>%
     group_by(week)%>%
@@ -132,9 +133,8 @@ Dataset <- rbind(
 
 ```{r}
 #Model 1
-Pois1 <- glm(`good hits` ~ as.factor(week)+offset(log(pitches)) + `hits last week`, family = poisson, data=Dataset)
-summary(Pois1)
-
+Pois1 <- glm(`good hits` ~ offset(log(pitches)) + `hits last week`, family = poisson, data=Dataset)
+paste("MSE:", sum(residuals(Pois1)^2)/df.residual(Pois1))
 Dataset <- Dataset %>%
   mutate(fittedP1 = fitted(Pois1))
 ```
@@ -144,14 +144,14 @@ $$
 $$
 
 $$
-log(\hat{\lambda}_t)=
+log(\hat{\lambda}_t)=-4.225-0.004_\text{hits last week}
 $$
 
 ```{r}
 GeneralPois1 <- glmer(
-  `good hits` ~ as.factor(week)+offset(log(pitches))+`hits last week` + (1|week), family="poisson", data=Dataset
+  `good hits` ~ offset(log(pitches))+`hits last week` + (1|week), family="poisson", data=Dataset
 )
-summary(GeneralPois1)
+paste("MSE:", sum(residuals(GeneralPois1)^2)/df.residual(GeneralPois1))
 Dataset <- Dataset %>%
   mutate(fittedP2 = fitted(GeneralPois1))
 ```
@@ -159,19 +159,29 @@ Dataset <- Dataset %>%
 ```{r}
 #Model 3
 GeneralPois2 <- glmer(
-  `good hits` ~ as.factor(week)+offset(log(pitches))+`hits last week` + (1+week|player) + (1|week), family="poisson", data=Dataset)
-summary(GeneralPois2)
+  `good hits` ~ offset(log(pitches))+`hits last week` + (1+week|player), family="poisson", data=Dataset)
+paste("MSE:", sum(residuals(GeneralPois2)^2)/df.residual(GeneralPois2))
 Dataset <- Dataset %>%
   mutate(fittedP3 = fitted(GeneralPois2))
 ```
 
 
 ```{r}
+deviance(Pois1)
+AIC(Pois1)
+deviance(GeneralPois1)
+AIC(GeneralPois1)
+deviance(GeneralPois2)
+AIC(GeneralPois2)
+```
+
+```{r}
 Dataset %>%
   ggplot(aes(x=week, color=player))+
   geom_point(aes(y=`good hits`))+
-  #geom_line(aes(y=`fittedP1`), linetype=1)+
-  #geom_line(aes(y=`fittedP2`), linetype=2)+
-  geom_line(aes(y=`fittedP3`), linetype=3)
+  geom_line(aes(y=`fittedP1`), linetype=1, linewidth=0.5)+
+  geom_line(aes(y=`fittedP2`), linetype=2, linewidth=0.75)+
+  geom_line(aes(y=`fittedP3`), linetype=3, linewidth=1)+
+  theme_minimal()
 ```
 
