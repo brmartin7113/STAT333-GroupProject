@@ -192,10 +192,22 @@ $$
 
 
 ```{r}
-anova(Pois1, test="Chi")$`Pr(>Chi)`[2]
-anova(Pois1, GeneralPois1, test="Chi")$`Pr(>Chi)`[2]
-anova(GeneralPois1, GeneralPois2, test="Chi")$`Pr(>Chisq)`[2]
-1-pchisq(deviance(GeneralPois2), df.residual(GeneralPois2))
+paste(
+  "p-value between the null model and our model 1:", 
+  round(anova(Pois1, test="Chi")$`Pr(>Chi)`[2],3)
+  )
+paste(
+  "p-value between our model 1 and model 2:", 
+  round(anova(Pois1, GeneralPois1, test="Chi")$`Pr(>Chi)`[2],3)
+  )
+paste(
+  "p-value between our model 2 and model 3:", 
+  round(anova(GeneralPois1, GeneralPois2, test="Chi")$`Pr(>Chisq)`[2],3)
+  )
+paste(
+  "p-value between our model 3 and the saturated model:", 
+  round(1-pchisq(deviance(GeneralPois2), df.residual(GeneralPois2)),3)
+  )
 ```
 
 ```{r}
@@ -214,6 +226,7 @@ Dataset %>%
   group_by(player) %>%
   summarise(
     `weeks played` = n(),
+    `tot. pitches` = sum(`pitches`),
     `tot. good hits` = sum(`good hits`),
     `avg. good hits per week` = mean(`good hits`),
     `sd. good hits per week` = var(`good hits`)
