@@ -140,11 +140,11 @@ Dataset <- Dataset %>%
 ```
 
 $$
-\hat{y}_t \sim Poisson(\hat{\lambda}_t)
+y_t \sim Poisson(\lambda_t)
 $$
 
 $$
-log(\hat{\lambda}_t)=-4.225-0.004_\text{hits last week}
+log(\lambda_t)=log(\text{pitches}_t)+\beta_0+\beta_1x_{t-1}
 $$
 
 ```{r}
@@ -156,6 +156,18 @@ Dataset <- Dataset %>%
   mutate(fittedP2 = fitted(GeneralPois1))
 ```
 
+$$
+y_t \sim Pois(\lambda_t)
+$$
+
+$$
+log(\lambda_t) = log(\text{pitches}_t)+\beta_0+\beta_1x_{t-1}+\epsilon_t
+$$
+
+$$
+\epsilon_t \sim N(0, \sigma^2)
+$$
+
 ```{r}
 #Model 3
 GeneralPois2 <- glmer(
@@ -164,6 +176,22 @@ paste("MSE:", sum(residuals(GeneralPois2)^2)/df.residual(GeneralPois2))
 Dataset <- Dataset %>%
   mutate(fittedP3 = fitted(GeneralPois2))
 ```
+
+$$
+y_{t,i} \sim Pois(\lambda_{t,i})
+$$
+
+$$
+log(\lambda_{t,i}) = log(\text{pitches}_t)+\beta_0+\beta_1x_{t-1}+\epsilon_t+V_{t,i}
+$$
+
+$$
+\epsilon_t \sim N(0, \sigma^2)
+$$
+
+$$
+V_{t,i} \text{ is the differencing term between the players}
+$$
 
 
 ```{r}
@@ -178,11 +206,12 @@ AIC(GeneralPois2)
 ```{r}
 Dataset %>%
   ggplot(aes(x=week, color=player))+
-  geom_line(aes(y=`good hits`), size=0.5)+
-  geom_point(aes(y=`fittedP1`), shape=15, size=1)+
-  geom_point(aes(y=`fittedP2`), shape=17, size=1)+
-  geom_point(aes(y=`fittedP3`), shape=18, size=1)+
-  theme_minimal()
+  geom_point(aes(y=`good hits`, shape=player), size=2)+
+  geom_line(aes(y=`good hits`))+
+  theme_minimal()+
+  labs(title="Observed good hits by player",
+       x="Week Played",
+       y="Good hits observed")
 ```
 
 ```{r}
