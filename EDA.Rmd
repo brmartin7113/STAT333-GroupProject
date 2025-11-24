@@ -234,8 +234,7 @@ Dataset %>%
 
 Dataset %>%
   ggplot(aes(fill=player))+
-  geom_histogram(aes(x=`good hits`))+
+  geom_histogram(aes(x=`good hits`, color="black"), bins=6)+
   scale_color_manual(values=c("Betts"="red", "Judge"="green", "Ohtani"="blue"))+
-  scale_x_continuous(limits=c(-1,6))+
   theme_minimal()
 ```
