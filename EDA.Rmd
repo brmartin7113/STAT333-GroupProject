@@ -134,7 +134,6 @@ Dataset <- rbind(
 ```{r}
 #Model 1
 Pois1 <- glm(`good hits` ~ offset(log(pitches)) + `hits last week`, family = poisson, data=Dataset)
-paste("MSE:", sum(residuals(Pois1)^2)/df.residual(Pois1))
 Dataset <- Dataset %>%
   mutate(fittedP1 = fitted(Pois1))
 ```
@@ -151,7 +150,6 @@ $$
 GeneralPois1 <- glmer(
   `good hits` ~ offset(log(pitches))+`hits last week` + (1|week), family="poisson", data=Dataset
 )
-paste("MSE:", sum(residuals(GeneralPois1)^2)/df.residual(GeneralPois1))
 Dataset <- Dataset %>%
   mutate(fittedP2 = fitted(GeneralPois1))
 ```
@@ -172,7 +170,6 @@ $$
 #Model 3
 GeneralPois2 <- glmer(
   `good hits` ~ offset(log(pitches))+`hits last week` + (1+week|player), family="poisson", data=Dataset)
-paste("MSE:", sum(residuals(GeneralPois2)^2)/df.residual(GeneralPois2))
 Dataset <- Dataset %>%
   mutate(fittedP3 = fitted(GeneralPois2))
 ```
@@ -195,12 +192,10 @@ $$
 
 
 ```{r}
-deviance(Pois1)
-AIC(Pois1)
-deviance(GeneralPois1)
-AIC(GeneralPois1)
-deviance(GeneralPois2)
-AIC(GeneralPois2)
+anova(Pois1, test="Chi")$`Pr(>Chi)`[2]
+anova(Pois1, GeneralPois1, test="Chi")$`Pr(>Chi)`[2]
+anova(GeneralPois1, GeneralPois2, test="Chi")$`Pr(>Chisq)`[2]
+1-pchisq(deviance(GeneralPois2), df.residual(GeneralPois2))
 ```
 
 ```{r}
