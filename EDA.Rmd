@@ -148,7 +148,7 @@ $$
 
 ```{r}
 GeneralPois1 <- glmer(
-  `good hits` ~ offset(log(pitches))+`hits last week` + (1|week), family="poisson", data=Dataset
+  `good hits` ~ (offset(log(pitches))+`hits last week`)|week, family="poisson", data=Dataset
 )
 Dataset <- Dataset %>%
   mutate(fittedP2 = fitted(GeneralPois1))
@@ -169,7 +169,7 @@ $$
 ```{r}
 #Model 3
 GeneralPois2 <- glmer(
-  `good hits` ~ offset(log(pitches))+`hits last week` + (1+week|player), family="poisson", data=Dataset)
+  `good hits` ~ (offset(log(pitches))+`hits last week`)|(week+player), family="poisson", data=Dataset)
 Dataset <- Dataset %>%
   mutate(fittedP3 = fitted(GeneralPois2))
 ```
@@ -267,18 +267,45 @@ significanceMatrix <- matrix(
 rownames(significanceMatrix) <- c("M1", "M2", "M3")
 colnames(significanceMatrix) <- c("Null", "M1", "M2", "M3", "Sat.")
 
+generalPoisNull1 <- glmer(`good hits`~(1|week), family="poisson", data=Dataset)
+generalPoisNull2 <- glmer(`good hits`~(1|(week+player)), family="poisson", data=Dataset)
+
 significanceMatrix[1,1] <- round(anova(Pois1, test="Chi")$`Pr(>Chi)`[2],3)
 significanceMatrix[1,3] <- round(anova(Pois1, GeneralPois1, test="Chi")$`Pr(>Chi)`[2],3)
 significanceMatrix[1,4] <- round(anova(Pois1, GeneralPois2, test="Chi")$`Pr(>Chi)`[2],3)
 significanceMatrix[1,5] <- round(1-pchisq(deviance(Pois1), df.residual(Pois1)),3)
-significanceMatrix[2,1] <- round(anova(GeneralPois1, test="Chi")$`F value`,3)
+significanceMatrix[2,1] <- round(anova(generalPoisNull1, GeneralPois1, test="Chi")$`Pr(>Chisq)`[2],3)
 significanceMatrix[2,2] <- round(anova(Pois1, GeneralPois1, test="Chi")$`Pr(>Chi)`[2],3)
 significanceMatrix[2,4] <- round(anova(GeneralPois1, GeneralPois2, test="Chi")$`Pr(>Chisq)`[2],3)
 significanceMatrix[2,5] <- round(1-pchisq(deviance(GeneralPois1), df.residual(GeneralPois1)),3)
-significanceMatrix[3,1] <- round(anova(GeneralPois2, test="Chi")$`F value`,3)
+significanceMatrix[3,1] <- round(anova(generalPoisNull2, GeneralPois2, test="Chi")$`Pr(>Chisq)`[2],3)
 significanceMatrix[3,2] <- round(anova(Pois1, GeneralPois2, test="Chi")$`Pr(>Chi)`[2],3)
 significanceMatrix[3,3] <- round(anova(GeneralPois1, GeneralPois2, test="Chi")$`Pr(>Chisq)`[2],3)
 significanceMatrix[3,5] <- round(1-pchisq(deviance(GeneralPois2), df.residual(GeneralPois2)),3)
 
 significanceMatrix
+```
+
+```{r}
+Dataset %>%
+  ggplot(aes(x=week, color=player, shape=player))+
+  geom_point(aes(y=`good hits`))+
+  geom_line(aes(y=fitted(GeneralPois1)), linetype=2)+
+  labs(
+    title="Model assessment graph",
+    x="week played",
+    y="good hits recorded",
+    caption="Comparing the actual good hits recorded with the fitted good"
+  )
+```
+
+```{r}
+set.seed(333)
+DatasetTraining <- Dataset %>%
+  slice_sample(prop=0.65)
+ xDatasetValidation <- anti_join(Dataset, DatasetTraining)
+
+PoisTraining <- glmer(`good hits` ~ (offset(log(pitches))+`hits last week`)|week, family="poisson", data=DatasetTraining)
+fitted(PoisTraining)
+predict(PoisTraining, DatasetValidation)
 ```
